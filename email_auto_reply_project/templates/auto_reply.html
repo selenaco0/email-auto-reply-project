@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home - Auto Reply Email</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f6fa;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: auto;
+            background: #fff;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+
+        label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 140px;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            resize: vertical;
+            font-size: 14px;
+        }
+
+        textarea:focus {
+            border-color: #3498db;
+            outline: none;
+            box-shadow: 0 0 6px rgba(52, 152, 219, 0.3);
+        }
+
+        button {
+            margin-top: 12px;
+            padding: 10px 18px;
+            border: none;
+            border-radius: 8px;
+            background: #3498db;
+            color: #fff;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        button:hover {
+            background: #2980b9;
+        }
+
+        .output-section, .inquiry-history {
+            margin-top: 25px;
+            padding: 15px;
+            background: #f9fafc;
+            border-radius: 10px;
+            border: 1px solid #eee;
+        }
+
+        h3 {
+            margin-top: 0;
+            color: #34495e;
+        }
+
+        .formatted-reply {
+            background: #eaf4ff;
+            border-left: 4px solid #3498db;
+            padding: 10px;
+            border-radius: 6px;
+            margin: 8px 0;
+            white-space: pre-wrap;
+        }
+
+        .inquiry-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .inquiry-item {
+            margin-bottom: 15px;
+            padding: 12px;
+            background: #fff;
+            border: 1px solid #e3e6ea;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .question-text {
+            font-weight: bold;
+            margin-bottom: 6px;
+            color: #2c3e50;
+        }
+
+        .answer-text {
+            color: #555;
+            font-size: 14px;
+        }
+
+        ul#questionsOutput {
+            margin-top: 10px;
+            padding-left: 20px;
+        }
+
+        ul#questionsOutput li {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Auto Reply Email Application</h1>
+
+        <div class="input-section">
+            <label for="emailInput">Enter your email content:</label>
+            <textarea id="emailInput" placeholder="Enter your email content here..."></textarea>
+            <button onclick="sendAutoReply()">Send Auto Reply</button>
+        </div>
+
+        <div class="output-section">
+            <h3>Auto Reply:</h3>
+            <div id="responseOutput" class="formatted-reply"></div>
+            <h3>Inquiry Questions:</h3>
+            <ul id="questionsOutput"></ul>
+        </div>
+
+        <div class="inquiry-history">
+            <h3>All Inquiry Questions History</h3>
+            <h5>(Refresh for updated list)</h5>
+            <ol class="inquiry-list">
+                {% for inquiry in inquiry_questions %}
+                    <li class="inquiry-item">
+                        <div class="question-text">
+                            <strong>Q{{ forloop.counter }}:</strong> {{ inquiry.question }}
+                        </div>
+                        <div class="answer-text">
+                            <strong>Answer:</strong> {{ inquiry.answer|default:"[No answer yet]" }}
+                        </div>
+                    </li>
+                {% empty %}
+                    <li class="inquiry-item">No inquiry questions available.</li>
+                {% endfor %}
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        function sendAutoReply() {
+            const userInput = document.getElementById('emailInput').value.trim();
+            if (!userInput) {
+                document.getElementById('responseOutput').innerText = "Please enter an email paragraph.";
+                return;
+            }
+
+            fetch('/api/auto_reply_email/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ "content": userInput }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.reply) {
+                    document.getElementById('responseOutput').innerText = data.reply;
+                    
+                    const questionsList = document.getElementById('questionsOutput');
+                    questionsList.innerHTML = "";
+                    if (data.questions && data.questions.length > 0) {
+                        data.questions.forEach(q => {
+                            const li = document.createElement("li");
+                            li.textContent = q;
+                            questionsList.appendChild(li);
+                        });
+                    } else {
+                        questionsList.innerHTML = "<li>No questions found.</li>";
+                    }
+                } else if (data.error) {
+                    document.getElementById('responseOutput').innerText = "Error: " + data.error;
+                } else {
+                    document.getElementById('responseOutput').innerText = "Unexpected response from server.";
+                }
+            })
+            .catch(error => {
+                document.getElementById('responseOutput').innerText = "Network or server error: " + error;
+            });
+        }
+    </script>
+</body>
+</html>
